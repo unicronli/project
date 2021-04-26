@@ -13,22 +13,23 @@ class PyLouvain:
         #            k_i (sum of the weights of the links incident to node i)
         self.m = self.edges.shape[0]
         self.k_i = np.zeros((nodes_num,1))
-        self.edges_of_node = {}
+        self.edges_of_node_s = {}
+        self.edges_of_node_t = {}
         self.w = np.zeros((nodes_num,1))
         
         for e in edges:
             self.k_i[e[0][1]] += e[1] # there's no self-loop initially
             # save edges by node
-            if e[0][0] not in self.edges_of_node:
+            if e[0][0] not in self.edges_of_node_s:
                 self.edges_of_node[e[0][0]] = [e]
             else:
                 self.edges_of_node[e[0][0]].append(e) #对于我们的情况应该到这为止。
-            """
-            if e[0][1] not in self.edges_of_node:
+            
+            if e[0][1] not in self.edges_of_node_t:
                 self.edges_of_node[e[0][1]] = [e]
-            elif e[0][0] != e[0][1]:
+            else:
                 self.edges_of_node[e[0][1]].append(e)
-            """
+            
         # access community of a node in O(1) time
         self.communities = [n for n in range(self.nodes)]
         self.actual_partition = []
@@ -103,10 +104,14 @@ class PyLouvain:
                 best_gain = 0
                 # remove _node from its community
                 best_partition[node_community].remove(node)
-                best_shared_links = 0
-                for e in self.edges_of_node[node]:
-                    if e[0][0] == node and self.communities[e[0][1]] == node_community or e[0][1] == node and self.communities[e[0][0]] == node_community:
-                        best_shared_links += e[1]
+                best_shared_links_s = 0
+                best_shared_links_t = 0
+                for e in self.edges_of_node_s[node]:
+                    if self.communities[e[0][1]] == node_community: 
+                        best_shared_links_s += e[1]
+                for e in self.edges_of_node_t[node]:
+                    if self.communities[e[0][0]] == node_community:
+                        best_shared_links_t += e[1]
                 self.s_in[node_community] -= best_shared_links + self.w[node]
                 self.s_tot[node_community] -= self.k_i[node]
                 self.communities[node] = -1
