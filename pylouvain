@@ -112,8 +112,8 @@ class PyLouvain:
                 for e in self.edges_of_node_t[node]:
                     if self.communities[e[0][0]] == node_community:
                         best_shared_links_t += e[1]
-                self.s_in[node_community] -= best_shared_links + self.w[node]
-                self.s_tot[node_community] -= self.k_i[node]
+                self.s_in[node_community] -= best_shared_links_s + best_shared_links_t + self.w[node]
+                self.s_tot[node_community] -= self.k_i[node] - best_shared_links_t + best_shared_links_s
                 self.communities[node] = -1
                 communities = {} # only consider neighbors of different communities
                 for neighbor in self.get_neighbors(node):
