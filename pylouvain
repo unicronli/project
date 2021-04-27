@@ -14,7 +14,6 @@ class PyLouvain:
         self.m = self.edges.shape[0]
         self.k_i = np.zeros((nodes_num,1))
         self.edges_of_node_s = {}
-        self.edges_of_node_t = {}
         self.w = np.zeros((nodes_num,1))
         
         for e in edges:
@@ -25,7 +24,7 @@ class PyLouvain:
             else:
                 self.edges_of_node[e[0][0]].append(e) #对于我们的情况应该到这为止。
             
-            if e[0][1] not in self.edges_of_node_t:
+            if e[0][1] not in self.edges_of_node_s:
                 self.edges_of_node[e[0][1]] = [e]
             else:
                 self.edges_of_node[e[0][1]].append(e)
@@ -104,16 +103,14 @@ class PyLouvain:
                 best_gain = 0
                 # remove _node from its community
                 best_partition[node_community].remove(node)
-                best_shared_links_s = 0
-                best_shared_links_t = 0
-                for e in self.edges_of_node_s[node]:
-                    if self.communities[e[0][1]] == node_community: 
-                        best_shared_links_s += e[1]
-                for e in self.edges_of_node_t[node]:
-                    if self.communities[e[0][0]] == node_community:
-                        best_shared_links_t += e[1]
-                self.s_in[node_community] -= best_shared_links_s + best_shared_links_t + self.w[node]
-                self.s_tot[node_community] -= self.k_i[node] - best_shared_links_t + best_shared_links_s
+                best_shared_links = 0
+                
+                for e in self.edges_of_node[node]:
+                    if (self.communities[e[0][1]] == node_community and e[0][0]==node) or (self.communities[e[0][0]] == node_community and e[0][1]==node) : 
+                        best_shared_links += e[1]
+               
+                self.s_in[node_community] -= best_shared_links+ self.w[node]
+                self.s_tot[node_community] -= self.k_i[node] 
                 self.communities[node] = -1
                 communities = {} # only consider neighbors of different communities
                 for neighbor in self.get_neighbors(node):
@@ -122,9 +119,7 @@ class PyLouvain:
                         continue
                     communities[community] = 1
                     shared_links = 0
-                    for e in self.edges_of_node[node]:
-                        if e[0][0] == e[0][1]:
-                            continue
+                    for e in self.edges_of_node[node]:                    
                         if e[0][0] == node and self.communities[e[0][1]] == community or e[0][1] == node and self.communities[e[0][0]] == community:
                             shared_links += e[1]
                     # compute modularity gain obtained by moving _node to the community of _neighbor
@@ -136,7 +131,7 @@ class PyLouvain:
                 # insert _node into the community maximizing the modularity gain
                 best_partition[best_community].append(node)
                 self.communities[node] = best_community
-                self.s_in[best_community] += 2 * (best_shared_links + self.w[node])
+                self.s_in[best_community] += best_shared_links + self.w[node]
                 self.s_tot[best_community] += self.k_i[node]
                 if node_community != best_community:
                     improvement = 1
@@ -150,8 +145,6 @@ class PyLouvain:
     '''
     def get_neighbors(self, node):
         for e in self.edges_of_node[node]:
-            if e[0][0] == e[0][1]: # a node is not neighbor with itself
-                continue
             if e[0][0] == node:
                 yield e[0][1]
             if e[0][1] == node:
